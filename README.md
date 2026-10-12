@@ -1,55 +1,42 @@
-# Test tehnic: tranzacții card -> SQL -> facturi (Python + Supabase)
+# Card transactions → SQL → invoices (Python + Supabase)
 
-## Ce face proiectul
+## What the project does
 
-1. **Încarcă** datele din tab-ul `Transactions` al fișierului Excel în 3 tabele PostgreSQL
-   (`customer`, `cards`, `card_transactions`), conform structurilor din celelalte tab-uri.
-2. **Generează facturi** (`invoice_header`) pentru fiecare client, pentru primele 15 zile ale unei luni.
+1. **Loads** the `Transactions` tab of the Excel file into 3 PostgreSQL tables
+   (`customer`, `cards`, `card_transactions`), following the structures given in the other tabs.
+2. **Generates invoices** (`invoice_header`) for every customer, covering the first 15 days of a month.
 
-## Cum se rulează
 
-```
-python -m venv .venv
-.venv\Scripts\activate            (Windows)   |   source .venv/bin/activate   (Mac/Linux)
-pip install -r requirements.txt
-```
 
-1. Copiază `.env.example` ca `.env` și pune connection string-ul Supabase (Session pooler).
-2. `python create_tables.py`: creează tabelele (șterge și recreează, deci pornește mereu de la zero).
-3. `python load_data.py`: încarcă datele din Excel.
-4. `python generate_invoices.py 2026 9`: generează facturile pentru 1-15 septembrie 2026.
+## How it's built (and why)
 
-Scripturile 2 și 3 pot fi rulate de mai multe ori fără să dubleze datele.
+- **Python + pandas** to read the Excel file. It's the most direct way to read a tab and drop duplicates.
+- **Normalized tables.** A customer has several cards and a card has several transactions. The Excel file repeats
+  the customer's name on every row, but in the database it appears only once (`customer`).
+- **Database-generated keys** (`identity`) for customers, cards and invoices. The Excel rows are matched through
+  `customer_code` and `card_number`, which are declared `unique`. `transaction_id` comes from the API, so I keep it as it is.
+- **Load order** follows the foreign keys: customers, then cards, then transactions.
+- **Amounts** are `numeric(12,2)` in the database and `Decimal` in Python, so there are no rounding errors with money.
+- **Safe to re-run.** `on conflict do nothing` when loading, and a `unique (customer_id, period_start, currency)`
+  constraint on the invoices.
+- **Invoice totals are calculated in SQL** (`sum ... group by`) and then checked automatically against the sum of
+  the transactions in the period.
 
-## Cum este gândit (și de ce)
+## Assumptions (the exercise doesn't specify them)
 
-- **Python + pandas** pentru citirea Excelului: e cel mai direct mod de a citi un tab și de a elimina duplicatele.
-- **Tabele normalizate**: un client are mai multe carduri, un card are mai multe tranzacții. Excelul repetă
-  numele clientului pe fiecare rând; în baza de date apare o singură dată (`customer`).
-- **Chei generate de baza de date** (`identity`) pentru client, card și factură. Legătura cu Excelul se face prin
-  `customer_code` și `card_number`, declarate `unique`. `transaction_id` vine din API și se păstrează ca atare.
-- **Ordinea încărcării** respectă cheile străine: clienți -> carduri -> tranzacții.
-- **Suma ca `numeric(12,2)`** și `Decimal` în Python, ca să nu apară erori de rotunjire la bani.
-- **Rulare repetată sigură**: `on conflict do nothing` la încărcare și constrângerea
-  `unique (customer_id, period_start, currency)` la facturi.
-- **Totalul facturilor se calculează în SQL** (`sum ... group by`), apoi se verifică automat față de suma
-  tranzacțiilor din perioadă.
+- **Invoiced period:** days 1-15 of the month (transactions up to the end of day 15).
+- **Issue date:** day 16, right after the period closes. **Due date:** issue date + 15 days.
+- **Only `APPROVED` transactions are invoiced.** The `DECLINED` ones never actually went through.
+- **Invoice number:** `INV-YYYYMM-<customer code>`, for example `INV-202609-C001`.
+- If a customer has transactions in more than one currency, they get one invoice per currency.
 
-## Presupuneri (enunțul nu le precizează)
+## Files
 
-- **Perioada facturată:** zilele 1-15 ale lunii (tranzacțiile de până la finalul zilei 15).
-- **Data emiterii:** ziua 16, imediat după închiderea perioadei. **Scadența:** emiterea + 15 zile.
-- **Se facturează doar tranzacțiile `APPROVED`**; cele `DECLINED` nu au fost efectuate efectiv.
-- **Număr factură:** `INV-AAAALL-<cod client>`, de exemplu `INV-202609-C001`.
-- Dacă un client are tranzacții în mai multe monede, primește câte o factură per monedă.
-
-## Structura fișierelor
-
-| Fișier | Rol |
+| File | What it does |
 |---|---|
-| `schema.sql` | structura tabelelor |
-| `db.py` | conexiunea la baza de date |
-| `create_tables.py` | creează tabelele |
-| `load_data.py` | citește Excelul și încarcă datele |
-| `generate_invoices.py` | generează facturile |
-| `test_tehnic_exemplu.xlsx` | fișier de exemplu (inventat, pentru exersare) |
+| `schema.sql` | table structure |
+| `db.py` | database connection |
+| `create_tables.py` | creates the tables |
+| `load_data.py` | reads the Excel file and loads the data |
+| `generate_invoices.py` | generates the invoices |
+| `Transactions-Example.xlsx` | sample file (made up, for practice) |
