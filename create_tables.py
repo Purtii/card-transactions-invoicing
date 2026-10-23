@@ -1,4 +1,4 @@
-"""Pasul 1: creează tabelele în Supabase, folosind schema.sql."""
+
 from pathlib import Path
 
 from db import get_connection
