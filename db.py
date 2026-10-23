@@ -1,11 +1,11 @@
-"""Conexiunea la Supabase (PostgreSQL), folosită de toate scripturile."""
+
 import os
 import sys
 
 import psycopg
 from dotenv import load_dotenv
 
-load_dotenv()  # citește fișierul .env
+load_dotenv()
 
 
 def get_connection() -> psycopg.Connection:
