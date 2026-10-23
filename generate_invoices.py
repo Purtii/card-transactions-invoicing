@@ -1,24 +1,15 @@
-"""Pasul 3: generează facturile pentru primele 15 zile ale unei luni.
 
-Folosire:  python generate_invoices.py AN LUNA      (ex.: python generate_invoices.py 2026 9)
-
-Reguli (vezi README.md):
-  - perioada facturată: zilele 1-15 ale lunii;
-  - data emiterii: ziua 16 (imediat după închiderea perioadei);
-  - scadența: 15 zile după data emiterii;
-  - se facturează doar tranzacțiile cu Status = APPROVED.
-"""
 import sys
 from datetime import date, timedelta
 
 from db import get_connection
 
-PERIOD_LAST_DAY = 15   # factura acoperă zilele 1-15
-DUE_DAYS = 15          # scadența = data emiterii + 15 zile
+PERIOD_LAST_DAY = 15   
+DUE_DAYS = 15          
 
-#argv este o lista care contine argumentele liniei de comanda, sys.argv[0] este numele scriptului, iar sys.argv[1] si sys.argv[2] sunt argumentele an si luna
+
 def parse_args() -> tuple[int, int]:
-    #programul se asteapta sa ii dai 3 argumente, daca nu, se opreste si iti spune cum sa il folosesti
+   
     if len(sys.argv) != 3:
         sys.exit("Folosire: python generate_invoices.py AN LUNA   (ex.: python generate_invoices.py 2026 9)")
     year, month = int(sys.argv[1]), int(sys.argv[2])
@@ -38,13 +29,13 @@ def main() -> None:
         "prefix": f"INV-{year}{month:02d}-",
         "start": period_start,
         "end": period_end,
-        "end_exclusive": issue_date,   # tranzacțiile până la finalul zilei 15
+        "end_exclusive": issue_date,   
         "issue": issue_date,
         "due": due_date,
     }
 
     with get_connection() as conn, conn.cursor() as cur:
-        # O factură per client (și monedă): suma tranzacțiilor APPROVED din perioadă.
+        
         cur.execute(
             """insert into invoice_header
                  (customer_id, invoice_number, period_start, period_end,
@@ -65,7 +56,7 @@ def main() -> None:
         )
         print(f"Facturi noi create: {cur.rowcount} (perioada {period_start} - {period_end}).")
 
-        # Afișăm facturile perioadei.
+      
         cur.execute(
             """select i.invoice_number, cu.full_name, i.issue_date, i.due_date, i.total_amount, i.currency
                from invoice_header i join customer cu on cu.customer_id = i.customer_id
@@ -78,7 +69,7 @@ def main() -> None:
         for number, name, issued, due, total, currency in rows:
             print(f"{number:<17}{name:<18}{issued!s:<12}{due!s:<12}{total:>10,.2f} {currency}")
 
-        # Verificare: totalul facturat = suma tranzacțiilor APPROVED din perioadă.
+      
         cur.execute(
             """select coalesce(sum(amount), 0) from card_transactions
                where status = 'APPROVED'
