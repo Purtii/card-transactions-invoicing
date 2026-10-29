@@ -8,7 +8,7 @@
 
 
 
-## How it's built (and why)
+## How it's built
 
 - **Python + pandas** to read the Excel file. It's the most direct way to read a tab and drop duplicates.
 - **Normalized tables.** A customer has several cards and a card has several transactions. The Excel file repeats
@@ -22,7 +22,7 @@
 - **Invoice totals are calculated in SQL** (`sum ... group by`) and then checked automatically against the sum of
   the transactions in the period.
 
-## Assumptions (the exercise doesn't specify them)
+## Assumptions
 
 - **Invoiced period:** days 1-15 of the month (transactions up to the end of day 15).
 - **Issue date:** day 16, right after the period closes. **Due date:** issue date + 15 days.
@@ -30,13 +30,4 @@
 - **Invoice number:** `INV-YYYYMM-<customer code>`, for example `INV-202609-C001`.
 - If a customer has transactions in more than one currency, they get one invoice per currency.
 
-## Files
 
-| File | What it does |
-|---|---|
-| `schema.sql` | table structure |
-| `db.py` | database connection |
-| `create_tables.py` | creates the tables |
-| `load_data.py` | reads the Excel file and loads the data |
-| `generate_invoices.py` | generates the invoices |
-| `Transactions-Example.xlsx` | sample file (made up, for practice) |
